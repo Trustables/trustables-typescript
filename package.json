@@ -1,14 +1,46 @@
 {
   "name": "@trustables/sdk",
   "version": "0.1.0",
-  "private": true,
-  "description": "Trustables server-side TypeScript SDK (private preview)",
+  "description": "Trustables server-side TypeScript SDK",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "exports": {".": {"types": "./dist/index.d.ts", "import": "./dist/index.js"}},
-  "files": ["dist", "contract", "README.md"],
-  "engines": {"node": ">=22"},
-  "scripts": {"build": "tsc", "test": "npm run build && node --test test/*.test.mjs", "example:simulator": "node examples/simulator.mjs", "test:live": "node examples/live-simulator.mjs"},
-  "devDependencies": {"typescript": "^5.9.3", "@types/node": "^22.0.0"}
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "contract",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "example:simulator": "node examples/simulator.mjs",
+    "test:live": "node examples/live-simulator.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.0.0"
+  },
+  "license": "MIT",
+  "homepage": "https://docs.trustables.de",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Trustables/trustables-typescript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Trustables/trustables-typescript/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

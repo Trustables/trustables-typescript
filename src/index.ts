@@ -11,7 +11,13 @@ export interface ClientOptions {
   timeoutMs?: number;
   /** Only for local HTTP fixtures. HTTPS is otherwise required. */
   allowInsecureLocalhost?: boolean;
+  /** Explicit opt-in for HTTP within a trusted, isolated private network. */
+  allowInsecureHttp?: boolean;
 }
+export interface WidgetReview { requester: string; purpose: string; credential: string; expires_at: string; branded: boolean }
+export interface WidgetActivation { url: string; qr_code_base64: string }
+export interface WidgetStatus { status: 'pending' | 'wallet_opened' | 'completed' | 'failed' | 'expired' }
+export interface QrCode { qr_code_base64: string; branded: boolean }
 export class TrustablesError extends Error {
   constructor(public readonly status: number, public readonly detail: unknown, public readonly retryAfter: string | null) {
     super(`Trustables API returned HTTP ${status}`);
@@ -31,7 +37,7 @@ export class Trustables {
   private readonly timeout: number;
   constructor(options: ClientOptions) {
     const url = new URL(options.baseUrl);
-    const local = options.allowInsecureLocalhost && url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    const local = url.protocol === 'http:' && (options.allowInsecureHttp || (options.allowInsecureLocalhost && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)));
     if ((url.protocol !== 'https:' && !local) || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
       throw new TypeError('baseUrl must be an HTTPS origin (no path, credentials, query or fragment)');
     }
@@ -75,6 +81,24 @@ export class Trustables {
   }
   getSession(sessionId: string): Promise<SessionStatusResponse> {
     return this.request('GET', `${this.orgPath}/sessions/${this.id(sessionId)}/status`);
+  }
+  getWidgetReview(sessionId: string): Promise<WidgetReview> {
+    this.requireSandbox(); return this.request('GET', `${this.orgPath}/sessions/${this.id(sessionId)}/widget`);
+  }
+  activateWidget(sessionId: string): Promise<WidgetActivation> {
+    this.requireSandbox(); return this.request('POST', `${this.orgPath}/sessions/${this.id(sessionId)}/widget`, {});
+  }
+  getWidgetStatus(sessionId: string): Promise<WidgetStatus> {
+    this.requireSandbox(); return this.request('GET', `${this.orgPath}/sessions/${this.id(sessionId)}/widget/status`);
+  }
+  cancelWidget(sessionId: string): Promise<{status: string}> {
+    this.requireSandbox(); return this.request('POST', `${this.orgPath}/sessions/${this.id(sessionId)}/widget/cancel`, {});
+  }
+  createQr(data: string, size = 220): Promise<QrCode> {
+    return this.request('POST', `${this.orgPath}/qr`, {data, size});
+  }
+  private requireSandbox(): void {
+    if (this.environment !== 'sandbox') throw new TypeError('Widget operations require sandbox environment');
   }
   /** Use only a simulator capability token, never a hosted-review token. */
   inspectSimulator(token: string): Promise<SimulatorInspect> {

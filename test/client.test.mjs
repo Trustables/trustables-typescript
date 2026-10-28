@@ -93,3 +93,20 @@ test('HTTP request timeout aborts a stalled session creation without retry', asy
   await assert.rejects(client.createSession('campaign'), {name:'TimeoutError'});
   assert.equal(calls, 1);
 });
+
+test('widget methods bind sandbox, encode session IDs and preserve QR requests', async t => {
+  const {client, requests} = await server(t, () => [200,{status:'pending'}], 'sandbox');
+  await client.getWidgetReview('a/b');await client.activateWidget('a/b');await client.getWidgetStatus('a/b');await client.cancelWidget('a/b');await client.createQr('https://merchant.example/handoff#opaque',240);
+  assert.deepEqual(requests.map(r=>[r.method,r.path]),[
+    ['GET','/api/v1/rp/orgs/org/sessions/a%2Fb/widget'],['POST','/api/v1/rp/orgs/org/sessions/a%2Fb/widget'],
+    ['GET','/api/v1/rp/orgs/org/sessions/a%2Fb/widget/status'],['POST','/api/v1/rp/orgs/org/sessions/a%2Fb/widget/cancel'],['POST','/api/v1/rp/orgs/org/qr']]);
+  assert.ok(requests.every(r=>r.headers['x-trustables-environment']==='sandbox'));
+  assert.equal(requests.at(-1).body.size,240);
+  const sim=await server(t,()=>[200,{}]);assert.throws(()=>sim.client.activateWidget('s'));assert.equal(sim.requests.length,0);
+});
+test('private HTTP requires explicit operator opt-in',()=>{
+  const opts={baseUrl:'http://api.internal:8000',apiKey:'test',orgId:'org',environment:'sandbox'};
+  assert.throws(()=>new Trustables(opts));assert.throws(()=>new Trustables({...opts,allowInsecureLocalhost:true}));
+  new Trustables({...opts,allowInsecureHttp:true});
+  assert.throws(()=>new Trustables({...opts,baseUrl:'http://user:password@api.internal',allowInsecureHttp:true}));
+});

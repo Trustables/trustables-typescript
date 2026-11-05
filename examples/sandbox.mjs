@@ -1,6 +1,7 @@
+import { Environment } from '../dist/index.js';
 import { readFileSync } from 'node:fs';
 import { client, required } from './config.mjs';
-const api = client('sandbox');
+const api = client(Environment.SANDBOX);
 // Use permitted claims, an approved redirect and your provisioned certificate/instance IDs.
 const body = JSON.parse(readFileSync(required('TRUSTABLES_REQUEST_FILE'), 'utf8'));
 const request = await api.createVerificationRequest(body);

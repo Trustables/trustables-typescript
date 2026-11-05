@@ -1,5 +1,6 @@
+import { Environment } from '../dist/index.js';
 import { client } from './config.mjs';
-const api = client('simulator');
+const api = client(Environment.SIMULATOR);
 const campaignId = process.env.TRUSTABLES_CAMPAIGN_ID || (await api.createSimulatorCampaign({name:'SDK example',purpose:'Test integration outcomes',profile:'pid'})).id;
 console.log('Save campaign ID for reuse:', campaignId);
 const session = await api.createSession(campaignId);

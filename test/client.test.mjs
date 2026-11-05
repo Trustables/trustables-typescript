@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
-import { Trustables, TrustablesError, PollTimeoutError, verifyWebhook } from '../dist/index.js';
+import { Environment, Trustables, TrustablesError, PollTimeoutError, verifyWebhook } from '../dist/index.js';
 const cases = JSON.parse(readFileSync(new URL('../contract/simulator-cases.json', import.meta.url)));
 const vector = JSON.parse(readFileSync(new URL('../contract/webhook-vector.json', import.meta.url)));
 async function server(t, handler, environment = 'simulator') {
@@ -109,4 +109,12 @@ test('private HTTP requires explicit operator opt-in',()=>{
   assert.throws(()=>new Trustables(opts));assert.throws(()=>new Trustables({...opts,allowInsecureLocalhost:true}));
   new Trustables({...opts,allowInsecureHttp:true});
   assert.throws(()=>new Trustables({...opts,baseUrl:'http://user:password@api.internal',allowInsecureHttp:true}));
+});
+
+test('environment constants preserve exact request header values', async t => {
+  for (const environment of [Environment.SIMULATOR, Environment.SANDBOX]) {
+    const {client, requests} = await server(t, () => [200, {status:'pending'}], environment);
+    await client.getSession('session');
+    assert.equal(requests[0].headers['x-trustables-environment'], environment);
+  }
 });

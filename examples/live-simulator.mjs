@@ -1,7 +1,8 @@
+import { Environment } from '../dist/index.js';
 // Opt-in live acceptance. Requires a person to select outcomes in the hosted UI.
 import assert from 'node:assert/strict';
 import { client, required } from './config.mjs';
-const api = client('simulator');
+const api = client(Environment.SIMULATOR);
 const campaignId = required('TRUSTABLES_CAMPAIGN_ID');
 for (const [scenario, status, accepted] of [['approved','completed',true],['consent_rejected','failed',false],['missing_attributes','failed',false],['ineligible','completed',true],['timeout','expired',false]]) {
   const session = await api.createSession(campaignId);

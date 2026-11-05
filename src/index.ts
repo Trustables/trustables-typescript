@@ -2,7 +2,8 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { Campaign, CampaignBody, CreateVerificationRequestBody, VerificationRequestResponse, VerificationSessionResponse, SessionStatusResponse, SimulatorInspect, SimulatorResult, OutcomeBody } from './types.js';
 export * from './types.js';
 
-export type Environment = 'simulator' | 'sandbox';
+import { Environment, parseEnvironment } from './environment.js';
+export { Environment, parseEnvironment } from './environment.js';
 export interface ClientOptions {
   baseUrl: string;
   apiKey: string;
@@ -42,13 +43,14 @@ export class Trustables {
       throw new TypeError('baseUrl must be an HTTPS origin (no path, credentials, query or fragment)');
     }
     if (!options.apiKey || /[\r\n]/.test(options.apiKey) || !options.orgId) throw new TypeError('apiKey and orgId are required');
-    if (!['simulator', 'sandbox'].includes(options.environment)) throw new TypeError('Unsupported environment');
+    const environment = parseEnvironment(options.environment);
+    if (environment === Environment.PRODUCTION) throw new TypeError('Production is not supported by this SDK preview');
     this.timeout = options.timeoutMs ?? 10000;
     if (!Number.isFinite(this.timeout) || this.timeout <= 0) throw new TypeError('timeoutMs must be positive');
     this.base = url.origin;
     this.#key = options.apiKey;
     this.orgPath = `/api/v1/rp/orgs/${this.id(options.orgId)}`;
-    this.environment = options.environment;
+    this.environment = environment;
   }
   private async request<T>(method: string, path: string, body?: unknown, capability = false, timeoutMs = this.timeout): Promise<T> {
     const headers: Record<string, string> = { Accept: 'application/json' };

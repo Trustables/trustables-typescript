@@ -111,15 +111,28 @@ export class Trustables {
     this.requireSimulator();
     return this.request('POST', '/api/v1/rp/simulator/complete', {token, scenario}, true);
   }
-  async waitForSession(sessionId: string, options: { timeoutMs?: number; intervalMs?: number } = {}): Promise<SessionStatusResponse> {
+  async waitForSession(sessionId: string, options: { timeoutMs?: number; intervalMs?: number; maxTransientErrors?: number } = {}): Promise<SessionStatusResponse> {
     const timeout = options.timeoutMs ?? 60000, interval = options.intervalMs ?? 1000;
     if (!Number.isFinite(timeout) || !Number.isFinite(interval) || timeout <= 0 || interval <= 0) throw new TypeError('Polling timeout and interval must be positive');
+    const maxErrors = options.maxTransientErrors ?? 0;
+    if (!Number.isInteger(maxErrors) || maxErrors < 0 || maxErrors > 10) throw new TypeError('maxTransientErrors must be an integer from 0 to 10');
+    let errors = 0;
     const deadline = performance.now() + timeout;
     const path = `${this.orgPath}/sessions/${this.id(sessionId)}/status`;
     while (performance.now() < deadline) {
       let result: SessionStatusResponse;
       try { result = await this.request('GET', path, undefined, false, Math.min(this.timeout, deadline - performance.now())); }
-      catch (error) { if (performance.now() >= deadline) throw new PollTimeoutError(); throw error; }
+      catch (error) {
+        if (performance.now() >= deadline) throw new PollTimeoutError();
+        if (!(error instanceof TrustablesError) || ![429, 502, 503, 504].includes(error.status) || errors++ >= maxErrors) throw error;
+        const seconds = error.retryAfter === null ? NaN : Number(error.retryAfter);
+        const retryAt = error.retryAfter === null ? NaN : Date.parse(error.retryAfter);
+        const delay = Math.max(interval, Number.isFinite(seconds) ? seconds * 1000 : Number.isFinite(retryAt) ? retryAt - Date.now() : 0);
+        const remaining = Math.max(0, deadline - performance.now());
+        await new Promise(resolve => setTimeout(resolve, Math.ceil(Math.min(delay, remaining))));
+        if (delay >= remaining) throw new PollTimeoutError();
+        continue;
+      }
       if (result.status !== 'pending') return result;
       await new Promise(resolve => setTimeout(resolve, Math.min(interval, Math.max(0, deadline - performance.now()))));
     }

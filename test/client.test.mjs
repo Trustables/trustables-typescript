@@ -118,3 +118,31 @@ test('environment constants preserve exact request header values', async t => {
     assert.equal(requests[0].headers['x-trustables-environment'], environment);
   }
 });
+
+test('opt-in polling recovers transient HTTP errors without retrying activation', async t => {
+  const {client, requests} = await server(t, (_, n) => n < 3 ? [503, {}, {'Retry-After':'0'}] : [200, cases[0].result]);
+  assert.deepEqual(await client.waitForSession('session', {intervalMs:1, maxTransientErrors:2}), cases[0].result);
+  assert.equal(requests.length,3);
+});
+test('polling retries are bounded and authentication errors are immediate', async t => {
+  for (const status of [401, 403, 429, 502, 503, 504]) {
+    const {client, requests} = await server(t, () => [status, {}]);
+    await assert.rejects(client.waitForSession('session', {intervalMs:1, maxTransientErrors:2}), e => e.status === status);
+    assert.equal(requests.length, [401,403].includes(status) ? 1 : 3);
+  }
+});
+test('Retry-After cannot extend polling deadline; invalid retry budgets fail early', async t => {
+  const {client, requests} = await server(t, () => [429, {}, {'Retry-After':'3600'}]);
+  await assert.rejects(client.waitForSession('session', {timeoutMs:30,intervalMs:1,maxTransientErrors:2}), PollTimeoutError);
+  assert.equal(requests.length,1);
+  for(const maxTransientErrors of [-1, 11, 1.5, NaN]) await assert.rejects(client.waitForSession('session', {maxTransientErrors}), TypeError);
+});
+
+test('status retry remains disabled by default and honors HTTP-date Retry-After', async t => {
+  const once = await server(t, () => [503, {}]);
+  await assert.rejects(once.client.waitForSession('session'), e => e.status === 503);
+  assert.equal(once.requests.length,1);
+  const later = await server(t, () => [429, {}, {'Retry-After':new Date(Date.now()+3600000).toUTCString()}]);
+  await assert.rejects(later.client.waitForSession('session', {timeoutMs:30,maxTransientErrors:2}), PollTimeoutError);
+  assert.equal(later.requests.length,1);
+});

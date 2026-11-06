@@ -31,6 +31,7 @@ export interface VerificationRequestResponse {
 }
 
 export interface VerificationSessionResponse {
+  crm_delivery_id?: string | null;
   session_id: string;
   authorization_request_url: string;
   request_uri?: string | null;
@@ -54,12 +55,20 @@ export interface SessionStatusResponse {
   accepted?: boolean | null;
   failure_reason?: string | null;
   verified_claims?: Record<string, unknown> | null;
+  verified_attributes?: Record<string, unknown> | null;
+  credential_metadata?: Record<string, unknown> | null;
+  attributes_retained?: boolean;
+  identity_attributes_retained?: boolean;
   mode?: string;
   simulated?: boolean;
   billable?: boolean | null;
   claims?: Record<string, unknown> | null;
   verification_status?: string | null;
   trust_status?: string | null;
+}
+
+export interface SessionInput {
+  crm_record_id: string;
 }
 
 export interface Error {
@@ -69,14 +78,14 @@ export interface Error {
 export interface CampaignBody {
   name: string;
   purpose: string;
-  profile?: "pid" | "mdl";
+  profile?: "pid" | "mdl" | "student";
 }
 
 export interface Campaign {
   id: string;
   name: string;
   purpose: string;
-  profile: "pid" | "mdl";
+  profile: "pid" | "mdl" | "student";
   mode: "simulator";
   simulated: true;
 }
@@ -99,6 +108,10 @@ export interface SimulatorInspect {
   accepted?: boolean | null;
   failure_reason?: string | null;
   verified_claims?: null;
+  verified_attributes?: null;
+  credential_metadata?: null;
+  attributes_retained?: boolean;
+  identity_attributes_retained?: boolean;
   mode: "simulator";
   simulated: true;
   billable: false;
@@ -118,6 +131,10 @@ export interface SimulatorResult {
   accepted?: boolean | null;
   failure_reason?: string | null;
   verified_claims?: null;
+  verified_attributes?: null;
+  credential_metadata?: null;
+  attributes_retained?: boolean;
+  identity_attributes_retained?: boolean;
   mode: "simulator";
   simulated: true;
   billable: false;

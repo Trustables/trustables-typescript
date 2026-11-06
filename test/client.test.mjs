@@ -28,11 +28,11 @@ for (const fixture of cases) {
     assert.deepEqual(await client.getSession(session.session_id), fixture.result);
     assert.equal(requests[0].headers.authorization, 'Bearer fixture-key');
     assert.equal(requests[0].headers['x-trustables-environment'], 'simulator');
-    assert.equal(requests[0].path, '/api/v1/rp/orgs/org/simulator/campaigns');
+    assert.equal(requests[0].path, '/v1/rp/orgs/org/simulator/campaigns');
     assert.equal(requests[0].method, 'POST');
-    assert.equal(requests[1].path, '/api/v1/rp/orgs/org/verification-requests/campaign/session');
-    assert.equal(requests[2].path, '/api/v1/rp/simulator/complete');
-    assert.equal(requests[3].path, `/api/v1/rp/orgs/org/sessions/${session.session_id}/status`);
+    assert.equal(requests[1].path, '/v1/rp/orgs/org/verification-requests/campaign/session');
+    assert.equal(requests[2].path, '/v1/rp/simulator/complete');
+    assert.equal(requests[3].path, `/v1/rp/orgs/org/sessions/${session.session_id}/status`);
     assert.equal(requests[1].method, 'GET');
     assert.equal(requests[2].headers.authorization, undefined);
     assert.equal(requests[2].headers['x-trustables-environment'], undefined);
@@ -98,8 +98,8 @@ test('widget methods bind sandbox, encode session IDs and preserve QR requests',
   const {client, requests} = await server(t, () => [200,{status:'pending'}], 'sandbox');
   await client.getWidgetReview('a/b');await client.activateWidget('a/b');await client.getWidgetStatus('a/b');await client.cancelWidget('a/b');await client.createQr('https://merchant.example/handoff#opaque',240);
   assert.deepEqual(requests.map(r=>[r.method,r.path]),[
-    ['GET','/api/v1/rp/orgs/org/sessions/a%2Fb/widget'],['POST','/api/v1/rp/orgs/org/sessions/a%2Fb/widget'],
-    ['GET','/api/v1/rp/orgs/org/sessions/a%2Fb/widget/status'],['POST','/api/v1/rp/orgs/org/sessions/a%2Fb/widget/cancel'],['POST','/api/v1/rp/orgs/org/qr']]);
+    ['GET','/v1/rp/orgs/org/sessions/a%2Fb/widget'],['POST','/v1/rp/orgs/org/sessions/a%2Fb/widget'],
+    ['GET','/v1/rp/orgs/org/sessions/a%2Fb/widget/status'],['POST','/v1/rp/orgs/org/sessions/a%2Fb/widget/cancel'],['POST','/v1/rp/orgs/org/qr']]);
   assert.ok(requests.every(r=>r.headers['x-trustables-environment']==='sandbox'));
   assert.equal(requests.at(-1).body.size,240);
   const sim=await server(t,()=>[200,{}]);assert.throws(()=>sim.client.activateWidget('s'));assert.equal(sim.requests.length,0);

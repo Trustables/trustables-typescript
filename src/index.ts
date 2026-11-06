@@ -5,7 +5,7 @@ export * from './types.js';
 import { Environment, parseEnvironment } from './environment.js';
 export { Environment, parseEnvironment } from './environment.js';
 export interface ClientOptions {
-  baseUrl: string;
+  baseUrl?: string;
   apiKey: string;
   orgId: string;
   environment: Environment;
@@ -37,7 +37,7 @@ export class Trustables {
   private readonly environment: Environment;
   private readonly timeout: number;
   constructor(options: ClientOptions) {
-    const url = new URL(options.baseUrl);
+    const url = new URL(options.baseUrl === undefined ? 'https://api.trustables.de' : options.baseUrl);
     const local = url.protocol === 'http:' && (options.allowInsecureHttp || (options.allowInsecureLocalhost && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)));
     if ((url.protocol !== 'https:' && !local) || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
       throw new TypeError('baseUrl must be an HTTPS origin (no path, credentials, query or fragment)');
@@ -49,7 +49,7 @@ export class Trustables {
     if (!Number.isFinite(this.timeout) || this.timeout <= 0) throw new TypeError('timeoutMs must be positive');
     this.base = url.origin;
     this.#key = options.apiKey;
-    this.orgPath = `/api/v1/rp/orgs/${this.id(options.orgId)}`;
+    this.orgPath = `/v1/rp/orgs/${this.id(options.orgId)}`;
     this.environment = environment;
   }
   private async request<T>(method: string, path: string, body?: unknown, capability = false, timeoutMs = this.timeout): Promise<T> {
@@ -105,11 +105,11 @@ export class Trustables {
   /** Use only a simulator capability token, never a hosted-review token. */
   inspectSimulator(token: string): Promise<SimulatorInspect> {
     this.requireSimulator();
-    return this.request('POST', '/api/v1/rp/simulator/inspect', {token}, true);
+    return this.request('POST', '/v1/rp/simulator/inspect', {token}, true);
   }
   completeSimulator(token: string, scenario: OutcomeBody['scenario']): Promise<SimulatorResult> {
     this.requireSimulator();
-    return this.request('POST', '/api/v1/rp/simulator/complete', {token, scenario}, true);
+    return this.request('POST', '/v1/rp/simulator/complete', {token, scenario}, true);
   }
   async waitForSession(sessionId: string, options: { timeoutMs?: number; intervalMs?: number } = {}): Promise<SessionStatusResponse> {
     const timeout = options.timeoutMs ?? 60000, interval = options.intervalMs ?? 1000;

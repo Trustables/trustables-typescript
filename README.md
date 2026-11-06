@@ -1,6 +1,6 @@
 # Trustables Typescript SDK
 
-Server-side preview, version **0.1.2**. Requires Node.js 22+. Preview interfaces may change. Supports Simulator and provisioned Wallet Sandbox access.
+Server-side preview, version **0.1.3**. Requires Node.js 22+. Preview interfaces may change. Supports Simulator and provisioned Wallet Sandbox access.
 
 ## Install
 
@@ -23,8 +23,12 @@ After building, use `npm install /absolute/path/to/trustables-typescript` in you
 
 ## Run the Simulator example
 
-Provide `TRUSTABLES_BASE_URL` (your assigned HTTPS origin, without `/api`),
-`TRUSTABLES_ORG_ID`, and `TRUSTABLES_API_KEY` through your secret manager or environment.
+Provide `TRUSTABLES_ORG_ID` and `TRUSTABLES_API_KEY` through your secret manager or environment.
+The client defaults to `https://api.trustables.de` and calls `/v1/...`.
+Optionally set `TRUSTABLES_BASE_URL` to override the HTTPS origin for development or testing
+(for example `https://api.dev.trustables.de`), without `/api` or `/v1`.
+`TRUSTABLES_ENVIRONMENT` selects verification mode independently of the API origin.
+The SDK constructor takes explicit arguments; the example helper reads environment variables.
 Use a Simulator key. Never place keys in browser code or commit an `.env` file.
 Optionally set `TRUSTABLES_CAMPAIGN_ID` to reuse an existing campaign; otherwise the
 example creates one (the service limits active campaigns).
@@ -97,7 +101,7 @@ a separate test with your provisioned Sandbox credentials.
 
 ## Shared contract
 
-`contract/openapi.json` and generated language models share version 0.1.0 with the
+`contract/openapi.json` and generated language models share version 0.2.0 with the
 other SDK. See `contract/README.md` for provenance and the export/update procedure.
 Both snapshots must be updated together for API changes. CI checks generated types,
 compiles/packages the SDK, and runs tests. Version tags (`vX.Y.Z`) publish through GitHub Actions trusted publishing. Releases must match the package version and belong to `main`; version bumps are reviewed in a pull request before tagging.
@@ -116,19 +120,22 @@ Bind all calls to the authenticated customer/order and enforce CSRF and ownershi
 in your application. Widget status alone never authorizes fulfillment; read the
 accepted result for the exact session. These calls never retry automatically.
 
-HTTPS remains the default. `allow_insecure_http=True` (Python) or
-`allowInsecureHttp: true` (TypeScript) explicitly permits an operator-configured
+HTTPS remains the default. `allowInsecureHttp: true` explicitly permits an operator-configured
 HTTP origin on a trusted private network. It sends the API key without TLS; do not
 use it across untrusted networks or derive the origin from browser input.
 
 ## Typed environments
 
-```js
-import { Environment, parseEnvironment } from '@trustables/sdk;
+```ts
+import { parseEnvironment, Trustables } from '@trustables/sdk';
 
-const environment = Environment.SIMULATOR;
-// For untrusted configuration (invalid values throw TypeError):
-const configured = parseEnvironment('sandbox');
+const api = new Trustables({
+  apiKey: process.env.TRUSTABLES_API_KEY!,
+  orgId: process.env.TRUSTABLES_ORG_ID!,
+  environment: parseEnvironment(process.env.TRUSTABLES_ENVIRONMENT),
+  // Optional override; omitted values use https://api.trustables.de.
+  baseUrl: process.env.TRUSTABLES_BASE_URL,
+});
 ```
 
 `Environment.SIMULATOR`, `Environment.SANDBOX` and `Environment.PRODUCTION` use
